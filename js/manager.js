@@ -135,32 +135,24 @@ var ProjectManager = new (class ProjectManager {
 				width: 0,
 				padding: 0,
 				transition: "all 0.6s"
-			})).append($("<span>").addClass("icon icon-search").css({
+			}).on("input", function () {
+				$(".project").show().filter((_, el) => !el.childNodes[0].childNodes[0].nodeValue.toLowerCase().includes(this.value.toLowerCase())).hide();
+			}).on("blur", () => $(".project").show())).append($("<span>").addClass("icon icon-search").css({
 				position: "absolute",
 				right: "5%",
 				fontSize: "inherit",
 				padding: "2px"
 			}).on("click", ({target}) => {
-				const _this = $(target),
-				input = _this.siblings("input"),
-				open = _this.hasClass("icon-search");
-				input.css(open ? {
-					width: "100%",
-					padding: "0 10px"
-				} : {
-					width: 0,
-					padding: 0
-				});
-				setTimeout(() => {
-					if (open) {
-						input.on("input", () => {
-							this.parent.children(".project").show().filter((_, el) => !el.childNodes[0].childNodes[0].nodeValue.toLowerCase().includes(input.val().toLowerCase())).hide();
-						});
-					} else {
-						input.off("input");
+				const open = $(target).hasClass("icon-search");
+				$(target).toggleClass("icon-search icon-close").siblings("input").css(
+					open ? {
+						width: "100%",
+						padding: "0 10px"
+					} : {
+						width: 0,
+						padding: 0
 					}
-				}, open ? 600 : 0);
-				_this.toggleClass("icon-search icon-close");
+				).trigger(open ? "focus" : "blur");
 			})));
 		}
 	

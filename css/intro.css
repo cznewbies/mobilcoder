@@ -1,0 +1,40 @@
+body>div:not(.content) {
+    position: absolute;
+    z-index: 1061;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background: url(../icons/icon.svg) center 30% no-repeat;
+    background-size: 70%;
+}
+
+@keyframes textSlide {
+    from {
+        transform: translate(-24%) scale(0, 1)
+    }
+    to {
+        transform: translate(0) scale(1);
+    }
+}
+
+@keyframes rotateIn {
+    from {
+        transform: rotate3d(0, 0, 1, -200deg) scale(0.175) translate(300px);
+        opacity: 0;
+    }
+    to {
+        transform: translate3d(0, 0, 0) scale(0.175) translate(300px);
+        opacity: 1;
+    }
+}
+
+g[fill]>path {
+    animation: textSlide 1s ease-in-out;
+    animation-fill-mode: forwards;
+}
+
+g:not([fill]) {
+    animation: rotateIn 1s ease-in-out;
+    animation-fill-mode: forwards;
+}

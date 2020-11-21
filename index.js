@@ -27,3 +27,4 @@ $("header>.btn").on("click", function() {
 });
 
 $(localStorage["-mobilcoder-theme"] || "#light").trigger("click");
+$("div").eq(0).hide();
