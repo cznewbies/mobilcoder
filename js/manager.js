@@ -7,12 +7,10 @@ class AdManager {
 		this.index = 0;
 
 		// AdMob implementation
-		document.addEventListener("deviceready", () => {
-			document.removeEventListener("deviceready");
-			
+		document.addEventListener("deviceready", () => {			
 			// AdMob options
 			admob.setOptions({
-				bannerAdId: "NONE",
+				bannerAdId: interstitialAdId,
 				interstitialAdId,
 				autoShowInterstitial: true
 			});

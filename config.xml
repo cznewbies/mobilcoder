@@ -10,13 +10,9 @@
 	<content src="index.html" />
 	<preference name="DisallowOverscroll" value="true" />
 	<preference name="android-minSdkVersion" value="14" />
-	<!-- Difference between gap:plugin and plugin
-		is gap:plugin is for PhoneGap (more functionality) while plugin is
-		for Cordova (that's part of PhoneGap like Chromium is part of Chrome)
-	-->
 	<plugin name="cordova-plugin-inappbrowser" source="npm" spec="~1.7.1" />
 	<gap:plugin name="phonegap-admob" version="5.1.0" source="npm" />
-	<plugin name="cordova-plugin-console" spec="1.1.0" source="npm" />
+	<plugin name="cordova-plugin-console" spec="1.0.1" source="pgb" />
 	<access origin="*" />
 	<allow-intent href="https://tomas-wrobel.github.io/mobilcoder/" />
 	<icon src="icons/icon.png" />
