@@ -4,6 +4,15 @@
 <head>
 	<meta charset="UTF-8" />
 	<title>MobilCoder</title>
+	<link rel="stylesheet" href="css/light.css" id="mode" />
+	<link rel="stylesheet" href="css/sweetalert2.css" />
+	<link rel="shortcut icon" href="icons/icon.svg" type="image/svg+xml" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+
+<body>
+	<div style="position: absolute; left: 0; top: 0; height: 100%; width: 100%; background: url(icons/icon.svg) center no-repeat; background-size: 70%;"></div>
+	<script>document.querySelector("div").style.backgroundColor = (localStorage.getItem("-mobilcoder-theme") === "#dark" ? "#222" : "#FFF")</script>
 	<script src="js/prism.js"></script>
 	<script src="js/jquery.js"></script>
 	<script src="js/modals.js"></script>
@@ -16,13 +25,7 @@
 	<script src="js/project.js"></script>
 	<script src="js/editor.js"></script>
 	<script src="js/react.js"></script>
-	<link rel="stylesheet" href="css/sweetalert2.css" />
-	<link rel="stylesheet" href="css/light.css" id="mode" />
-	<link rel="shortcut icon" href="icons/icon.svg" type="image/svg+xml" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-
-<body>
+	<script src="js/ad.manager.js"></script>
 	<header class="bar bar-nav">
 		<button class="btn pull-left active" id="light"></button>
 		<button class="btn pull-right" id="dark"></button>
@@ -202,8 +205,8 @@
 				<div class="card">
 					<p>Author is 14-years-old programmer from the Czech Republic, Tomáš Wróbel. For more information see
 						<a href="https://bit.ly/tomas-wrobel" target="_blank">the website</a></p>
-					<p>For open source under <a href="https://mit-license.org/" target="_blank">the MIT license</a>, see
-						<a href="https://github.com/tomas-wrobel/mobilcoder" target="_blank">the GitHub page</a></p>
+					<p>For open source under <a href="https://mit-license.org/" target="_blank">the The GNU General Public License version 2</a>, see
+						<a href="https://github.com/cznewbies/mobilcoder" target="_blank">the GitHub page</a></p>
 				</div>
 				<div class="card">
 					<p><b>Used open-source</b></p>
@@ -245,8 +248,9 @@
 			</div>
 		</div>
 	</div>
-	<script src="js/project.manager.js"></script>
+	<script src="js/manager.js"></script>
 	<script src="index.js"></script>
+	<style>body:first-child {display: none;}</style>
 </body>
 
 </html>

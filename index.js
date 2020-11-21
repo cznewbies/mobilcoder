@@ -27,9 +27,3 @@ $("header>.btn").on("click", function() {
 });
 
 $(localStorage["-mobilcoder-theme"] || "#light").trigger("click");
-
-document.addEventListener("deviceready", function () {
-	// IDs are mine. Those aren't passwords but if you use it, I'll get paid per click.
-	admob.initAdmob("ca-app-pub-1393197938476976/3048345335", "ca-app-pub-1393197938476976/1676619570");
-	document.addEventListener(admob.Event.onInterstitialReceive, () => admob.showInterstitial(), false);
-});
