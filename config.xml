@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.cznewbies.mobilcoder" version="1.0.0" defaultlocale="en-US" xmlns="http://www.w3.org/ns/widgets" xmlns:gap="http://phonegap.com/ns/1.0">
+<widget id="com.cznewbies.mobilcoder" version="2.1.0" defaultlocale="en-US" xmlns="http://www.w3.org/ns/widgets" xmlns:gap="http://phonegap.com/ns/1.0">
 	<name>MobilCoder</name>
 	<description>
 		MobilCoder is free application that can edit HTML5, CSS3 and JavaScript and view it, all on mobile. BTW, you don't have to use pure JavaScript, you can use Typescript and/or React.
