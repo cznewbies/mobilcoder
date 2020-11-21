@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "lib": [
+            "ES2017.Object",
+            "ES2015",
+            "DOM",
+            "DOM.Iterable",
+            "ES2015.Iterable"
+        ],
+        "downlevelIteration": true,
+        "target": "ES5"
+    }
+}

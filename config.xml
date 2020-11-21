@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.cznewbies.mobilcoder" version="1.0.0" defaultlocale="en-US" xmlns="http://www.w3.org/ns/widgets" xmlns:gap="http://phonegap.com/ns/1.0">
+	<name>MobilCoder</name>
+	<description>
+		MobilCoder is free application that can edit HTML5, CSS3 and JavaScript and view it, all on mobile. BTW, you don't have to use pure JavaScript, you can use Typescript and/or React.
+	</description>
+	<author href="https://tomas-wrobel.github.io" email="wrobel@programmer.net">
+		Tomáš Wróbel
+	</author>
+	<content src="index.html" />
+	<preference name="DisallowOverscroll" value="true" />
+	<preference name="android-minSdkVersion" value="14" />
+	<plugin name="cordova-plugin-inappbrowser" source="npm" spec="~1.7.1" />
+	<gap:plugin name="com-admob-plugin" version="5.3.1" source="npm" />
+	<access origin="*" />
+	<allow-intent href="https://tomas-wrobel.github.io/mobilcoder/" />
+	<icon src="icons/icon.png" />
+	<plugin name="cordova-plugin-statusbar" spec="~2.4.3" />
+	<preference name="StatusBarBackgroundColor" value="#FFFFFF" />
+</widget>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<title>MobilCoder</title>
+	<script src="js/prism.js"></script>
+	<script src="js/jquery.js"></script>
+	<script src="js/modals.js"></script>
+	<script src="js/toggles.js"></script>
+	<script src="js/popovers.js"></script>
+	<script src="js/segmented-controllers.js"></script>
+	<script src="js/sweetalert2.js" class="swal"></script>
+	<script src="js/babel.js"></script>
+	<script src="js/sass.js"></script>
+	<script src="js/project.js"></script>
+	<script src="js/editor.js"></script>
+	<script src="js/react.js"></script>
+	<link rel="stylesheet" href="css/sweetalert2.css" />
+	<link rel="stylesheet" href="css/light.css" id="mode" />
+	<link rel="shortcut icon" href="icons/icon.svg" type="image/svg+xml" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+
+<body>
+	<header class="bar bar-nav">
+		<button class="btn pull-left active" id="light"></button>
+		<button class="btn pull-right" id="dark"></button>
+		<nav class="segmented-control">
+			<a class="control-item active" href="#html"></a>
+			<a class="control-item" href="#css"></a>
+			<a class="control-item" href="#js"></a>
+			<a class="control-item" href="#compile"></a>
+		</nav>
+	</header>
+	<div class="content">
+		<div class="card">
+			<div class="control-content active" id="html"></div>
+			<div class="control-content" id="css">
+				<ul class="table-view">
+					<li class="table-view-cell">
+						use Sass
+						<div class="toggle is-scss">
+							<div class="toggle-handle"></div>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<div class="control-content" id="js">
+				<ul class="table-view">
+					<li class="table-view-cell">
+						use TypeScript
+						<div class="toggle is-ts is-tsx">
+							<div class="toggle-handle"></div>
+						</div>
+					</li>
+					<li class="table-view-cell">
+						use React
+						<div class="toggle is-tsx is-jsx">
+							<div class="toggle-handle"></div>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<div class="control-content" id="compile">
+				<pre class="language-html" style="height: calc(100vh - 170px);"></pre>
+			</div>
+		</div>
+		<div class="bar bar-standard bar-footer-secondary">
+			<div class="segmented-control"></div>
+		</div>
+		<div class="bar bar-standard bar-footer-secondary" style="display: none;">
+			<a class="btn btn-block btn-pimary icon icon-download" style="font-size: inherit;"> Download</a>
+		</div>
+		<nav class="bar bar-tab">
+			<a href="#projects" class="tab-item">
+				<span class="icon icon-list"></span>
+				<span class="tab-label">Projects</span>
+			</a>
+			<a class="tab-item active" href="javascript:void(0)">
+				<span class="icon icon-code"></span>
+				<span class="tab-label">Code</span>
+			</a>
+			<a class="tab-item" href="#output">
+				<span class="icon icon-forward"></span>
+				<span class="tab-label">Run</span>
+			</a>
+			<a class="tab-item" href="#">
+				<span class="icon icon-star"></span>
+				<span class="tab-label">Rate</span>
+			</a>
+			<a class="tab-item" href="#info">
+				<span class="icon icon-info"></span>
+				<span class="tab-label">Info</span>
+			</a>
+		</nav>
+		<div class="modal active" id="projects">
+			<header class="bar bar-nav">
+				<a class="pull-left icon icon-compose" id="rename"></a>
+				<h1 class="title">Projects</h1>
+				<a class="pull-right icon icon-trash" id="delete"></a>
+			</header>
+				<ul class="table-view">
+					<li class="table-view-cell">
+						<a class="navigate-right" id="new">Create new</a>
+					</li>
+					<li class="table-view-cell">
+						<a class="navigate-right" id="plain">Continue without project</a>
+					</li>
+				</ul>
+				<nav class="bar bar-tab">
+					<a href="javascript:void(0)" class="tab-item active">
+						<span class="icon icon-list"></span>
+						<span class="tab-label">Projects</span>
+					</a>
+					<a class="tab-item" href="#projects" id="close">
+						<span class="icon icon-code"></span>
+						<span class="tab-label">Code</span>
+					</a>
+					<a class="tab-item" href="#output">
+						<span class="icon icon-forward"></span>
+						<span class="tab-label">Run</span>
+					</a>
+					<a class="tab-item" href="#">
+						<span class="icon icon-star"></span>
+						<span class="tab-label">Rate</span>
+					</a>
+					<a class="tab-item" href="#info">
+						<span class="icon icon-info"></span>
+						<span class="tab-label">Info</span>
+					</a>
+				</nav>
+			</div>
+		</div>
+		<div class="modal" id="output">
+			<header class="bar bar-nav">
+				<a href="#popover">
+					<h1 class="title">
+						<span id="title">Plain Project</span>
+						<span class="icon icon-caret"></span>
+					</h1>
+				</a>
+				<a class="icon icon-left-nav pull-left" href="#output"></a>
+				<a class="icon icon-download pull-right"></a>
+				<div id="popover" class="popover">
+					<header class="bar bar-nav">
+						<h1 class="title">Console</h1>
+					</header>
+					<ul class="table-view" id="console"></ul>
+				</div>
+			</header>
+			<div class="content">
+				<div class="card" style="height: calc(100% - 55px);">
+					<iframe src="about:blank" frameborder="0" height="100%" width="100%"></iframe>
+				</div>
+				<nav class="bar bar-tab">
+					<a href="#projects" class="tab-item">
+						<span class="icon icon-list"></span>
+						<span class="tab-label">Projects</span>
+					</a>
+					<a class="tab-item" href="#output">
+						<span class="icon icon-code"></span>
+						<span class="tab-label">Code</span>
+					</a>
+					<a class="tab-item active" href="javascript:void(0)">
+						<span class="icon icon-forward"></span>
+						<span class="tab-label">Run</span>
+					</a>
+					<a class="tab-item" href="#">
+						<span class="icon icon-star"></span>
+						<span class="tab-label">Rate</span>
+					</a>
+					<a class="tab-item" href="#info">
+						<span class="icon icon-info"></span>
+						<span class="tab-label">Info</span>
+					</a>
+				</nav>
+			</div>
+		</div>
+		<div class="modal" id="info">
+			<header class="bar bar-nav">
+				<h1 class="title">About</h1>
+			</header>
+			<div class="content">
+				<div class="card">
+					<p>MobilCoder is free application that can edit HTML5, CSS3 and <b>scripting language</b> and view
+						it, all on mobile.</p>
+					<p>&copy;
+						<script>document.write(new Date().getFullYear());</script> Tomáš Wróbel. All rights reserved</p>
+				</div>
+				<div class="card">
+					<p><b>Scripting language</b> can be JavaScript, TypeScript and React</p>
+					<p>JavaScript <code class="language-javascript">var newLine = document.createElemnt("br");</code>
+					</p>
+					<p>TypeScript <code class="language-ts">var newLine: HTMLBRElement = document.createElemnt("br");</code></p>
+					<p>React <code class="language-jsx">var newLine = &lt;br /></code></p>
+				</div>
+				<div class="card">
+					<p><b>MobilCoder console API</b></p>
+					<p>It's same as ECMAScript (standard) API but it doesn't support tags. Use HTML instead</p>
+				</div>
+				<div class="card">
+					<p>Author is 14-years-old programmer from the Czech Republic, Tomáš Wróbel. For more information see
+						<a href="https://bit.ly/tomas-wrobel" target="_blank">the website</a></p>
+					<p>For open source under <a href="https://mit-license.org/" target="_blank">the MIT license</a>, see
+						<a href="https://github.com/tomas-wrobel/mobilcoder" target="_blank">the GitHub page</a></p>
+				</div>
+				<div class="card">
+					<p><b>Used open-source</b></p>
+					<p>This theme is created by Ratchet under <a href="https://mit-license.org/" target="_blank">the MIT
+							license</a></p>
+					<p>Compiler for JavaScript (TypeScript and/or React) is Babel under <a href="https://mit-license.org/" target="_blank">the MIT license</a></p>
+					<p>The Sass compiler is Sass.js under <a href="https://raw.githubusercontent.com/sass/libsass/master/LICENSE">the specific license</a></p>
+					<p>This app is compiled via Adobe PhoneGap under <a href="">the Apache license</a></p>
+					<p>The code editor are Prism & CodeJar under <a href="https://mit-license.org/" target="_blank">the MIT
+							license</a></p>
+					<p>The popups are <a href="https://sweetalert2.github.io/" target="_blank">SweetAlert2</a> under
+						<a href="https://mit-license.org/" target="_blank">the MIT license</a></p>
+					<p>The icon is edited from Font Awesome under <a href="https://fontawesome.com/license"
+							target="_blank">the
+							Creative Commons Attribution 4.0 International license</a></p>
+				</div>
+				<nav class="bar bar-tab">
+					<a href="#projects" class="tab-item">
+						<span class="icon icon-list"></span>
+						<span class="tab-label">Projects</span>
+					</a>
+					<a class="tab-item" href="#info">
+						<span class="icon icon-code"></span>
+						<span class="tab-label">Code</span>
+					</a>
+					<a class="tab-item" href="#output">
+						<span class="icon icon-forward"></span>
+						<span class="tab-label">Run</span>
+					</a>
+					<a class="tab-item" href="#">
+						<span class="icon icon-star"></span>
+						<span class="tab-label">Rate</span>
+					</a>
+					<a class="tab-item active" href="javascript:void(0)">
+						<span class="icon icon-info"></span>
+						<span class="tab-label">Info</span>
+					</a>
+				</nav>
+			</div>
+		</div>
+	</div>
+	<script src="js/project.manager.js"></script>
+	<script src="index.js"></script>
+</body>
+
+</html>
