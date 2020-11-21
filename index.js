@@ -10,7 +10,6 @@ $("nav.segmented-control>a").on("click", function () {
 });
 
 $("header>.btn").css("text-transform", "capitalize").html(i => ["light", "dark"][i]);
-!!localStorage["-mobilcoder-theme"] && $(localStorage["-mobilcoder-theme"]).trigger("click");
 
 for (const char of "{}[]();,<>?'\"") {
 	$("div>.segmented-control").append($("<a>").text(char).addClass("control-item").on("mousedown", event => {
@@ -26,6 +25,8 @@ $("header>.btn").on("click", function() {
 		localStorage.setItem("-mobilcoder-theme", "#" + this.id);
 	}
 });
+
+$(localStorage["-mobilcoder-theme"] || "#light").trigger("click");
 
 document.addEventListener("deviceready", function () {
 	// IDs are mine. Those aren't passwords but if you use it, I'll get paid per click.
