@@ -24,7 +24,7 @@ class AdManager {
 				this.index = (this.index + 1) % 3;
 				return Promise.resolve();
 			};
-		});
+		}, true);
 	}
 
 	/**
