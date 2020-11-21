@@ -1,6 +1,7 @@
 @import url("prism-dark.css");
 @import url("ratchet-light.css");
 @import url("ratchet-dark.css");
+@import url("sweetalert2-dark.css");
 
 iframe {
     background-color: #fff;
