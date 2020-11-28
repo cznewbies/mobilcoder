@@ -3,7 +3,7 @@ $("nav>.control-item").each((i, el) => {
 	$(el).html($(el).attr("href").substr(1));
 });
 
-$("nav.segmented-control>a").on("click", function () {
+$("nav.segmented-control>a").on("click", function() {
 	if ($(this).attr("href") === "#compile" || $('#compile').hasClass("active")) {
 		$(".bar-footer-secondary").toggle();
 	}
@@ -27,4 +27,17 @@ $("header>.btn").on("click", function() {
 });
 
 $(localStorage["-mobilcoder-theme"] || "#light").trigger("click");
-$("div").eq(0).hide();
+$("#css .toggle").on("touchstart", function() {
+	const actual = $("#css .on");
+	const remove = () => {actual.removeClass("on").children().removeAttr("style");};
+	const action = (({
+		sass: remove,
+		less: remove,
+		scss() {
+			actual.hasClass("is-less") && remove();
+			$(".is-sass").addClass("on").children().removeAttr("style");
+		}
+	})[this.classList[1].substr(3)]);
+	$(this).one("toggle", action);
+});
+setTimeout(() => $("div").eq(0).remove(), 100);

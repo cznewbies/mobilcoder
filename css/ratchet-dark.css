@@ -15,7 +15,7 @@ body {
 	background-color: #000;
 }
 
-.content {
+.modal .content, .content {
 	background-color: #000;
 }
 

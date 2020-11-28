@@ -5,8 +5,23 @@ body>div:not(.content) {
     top: 0;
     height: 100%;
     width: 100%;
-    background: url(../icons/icon.svg) center 30% no-repeat;
     background-size: 70%;
+}
+
+div.light {
+    background: #FFF url(../icons/icon.svg) center 30% no-repeat;
+}
+
+div.dark {
+    background: #000 url(../icons/icon.svg) center 30% no-repeat;
+}
+
+div.light > svg > g:first-child > path {
+    fill: #333 !important;
+}
+
+div.dark > svg > g:first-child > path {
+    fill: #DDD !important;
 }
 
 @keyframes textSlide {
