@@ -1,7 +1,7 @@
 /**
- * @typedef {"html" | "css" | "js"} Language
+ * @typedef {"html" | "css" | "js" | "md"} Language
  * @typedef {Record<Language, Record<"code" | "compiler", string>>} ProjectInfo
- * @typedef {Record<Language, ReturnType<CodeJar<HTMLPreElement>>>} EditorCache
+ * @typedef {Record<Language, CodeJarPrototype} EditorCache
  */
 
 /** Simple class which can save progress */
@@ -10,11 +10,18 @@ class Project {
 	 * @param {string} name 
 	 */
 	constructor(name) {
+		this.serializer = new XMLSerializer();
+		this.parser = new DOMParser();
 		/** @type {ProjectInfo} */
 		this.info = {
 			html: {
 				code: this.createHTMLDocument(name),
-				compiler: "html" // null
+				compiler: null
+			},
+			// Markdown is the new one because
+			md: {
+				code: "#" + name,
+				compiler: null
 			},
 			css: {
 				code: "body, html {\n\t\n}",
@@ -25,29 +32,13 @@ class Project {
 				compiler: "js"
 			}
 		};
-		this.serializer = new XMLSerializer();
-		this.parser = new DOMParser();
 		this.iFrame = document.querySelector("iframe");
 		this.name = name;
 		/** @type {EditorCache} */
 		this.editors = {};
-		this.createDocument = this.createDocument.bind(this);
+		this.createFrameContent = this.createFrameContent.bind(this);
 	}
-	/**
-	 * @param {string|false} name 
-	 */
-	rename(name) {
-		if (!name) {
-			// do nothing
-		} else if (!!localStorage.getItem(this.name)) {
-			localStorage.removeItem(this.name);
-			this.name = name;
-			this.save();
-		}
-		else {
-			this.name = name;
-		}
-	}
+	// Visual \\
 	destroy() { // I destroy my elements
 		$(window).off("toggle");
 		$(".control-content").each((i, el) => {
@@ -55,21 +46,24 @@ class Project {
 			$(el).children("pre").remove();
 			this.editors[el.id].destroy();
 		});
-		$('a[href="#output"]').off("click", this.createDocument);
-		$(".on").removeClass("on");
+		$('a[href="#output"]').off("click", this.createFrameContent);
+		$(".on").removeClass("on").children().css({
+			transform: "translate3d(0,0,0)"
+		});
+		this.iFrame.srcdoc = '<!DOCTYPE html><html lang="en"><head><title>Plain Project</title></head><body></body><html>';
 	}
 	load() {
 		const _this = this;
-		$(".control-content").each(function () {
+		$(".control-content").each(function() {
 			if (this.id.length < 6) {
-				const code = $("<pre></pre>"),
-				togglesCount = {
-					html: 0,
-					css: 1,
+				const code = $("<pre></pre>").addClass("language-" + this.id);
+				const togglesCount = {
+					html: 1,
+					css: 3,
 					js: 2
 				};
-				code.addClass("language-" + this.id);
-				code.css("height", `calc(100vh - ${170 + togglesCount[this.id] * 43}px)`);
+				const height = `calc(100vh - ${170 + togglesCount[this.id] * 43}px)`;
+				code.css("height", height);
 				$(this).prepend(code);
 				const editor = CodeJar(code, Prism.highlightElement);
 				editor.updateCode(_this.info[this.id].code);
@@ -81,41 +75,94 @@ class Project {
 					_this.save();
 				});
 				_this.editors[this.id] = editor;
+				if (this.id === "html") {
+					const _code = $("<pre></pre>").addClass("language-markdown").css({height, display: "none"});
+					//const _code = $("<pre></pre>").addClass("language-markdown").css("height", height).hide();
+					$(this).prepend(_code);
+					const _editor = CodeJar(_code, Prism.highlightElement);
+					_editor.updateCode(_this.info.md.code);
+					_editor.onUpdate(code => {
+						_this.info.md.code = code;
+						_this.save();
+					});
+					_this.editors.md = _editor;
+				}
 			}
 		});
-		$(window).on("toggle", () => {
-			this.info.js.compiler = this.getScriptType();
-			this.info.css.compiler = this.getStyleType();
-			$("#js>pre")[0].className = "language-" + this.getScriptType();
-			$("#css>pre")[0].className = "language-" + this.getStyleType();
-			$('a[href="#js"]').html(this.getScriptType());
+		$(".toggle").on("toggle", function({detail: {isActive}}) {
+			if ($(this).hasClass("is-markdown")) {
+				$("#html>pre").toggle();
+				$('a[href="#html"]').html(isActive ? "md" : "html");
+				this.info.html.compiler = isActive ? "markdown" : null;
+			}
+			const css = _this.getStyleType();
+			const js = _this.getScriptType();
+			_this.info.js.compiler = js;
+			_this.info.css.compiler = css;
+			$("#js>pre")[0].className = "language-" + js;
+			$("#css>pre")[0].className = "language-" + css;
+			$('a[href="#js"]').html(js);
 			Prism.highlightElement($("#js>pre")[0]);
-			$('a[href="#css"]').html(this.getStyleType());
+			$('a[href="#css"]').html(css);
 			Prism.highlightElement($("#css>pre")[0]);
-			this.save();
+			_this.save();
 		});
 		$('a[href="#output"], a[href="#compile"]').on("click", async () => {
 			const blob = new Blob((await this.compiled()).split(/\r?\n/), {
 				type: "text/html",
 				endings: "native"
 			});
-			$(".icon-download").attr("href", URL.createObjectURL(blob)).attr("download", this.filify(this.name || "Untitled") + ".html");
+			$(".icon-download").attr("href", URL.createObjectURL(blob)).attr("download", this.filify(this.name) + ".html");
 		});
-		$('a[href="#output"]').on("click", this.createDocument);
+		$('nav>a[href="#output"]').on("click", this.createFrameContent);
 		const output = CodeJar($("#compile>pre"), Prism.highlightElement);
 		$("#compile>pre").removeAttr("contenteditable");
 		$('a[href="#compile"]').on("click", async () => output.updateCode(await this.compiled()));
-		$(`.is-${this.info.js.compiler}, .is-${this.info.css.compiler}`).addClass("on");
+		$(`.is-${this.info.js.compiler}, .is-${this.info.css.compiler}, .is-${this.info.html.compiler}`).addClass("on").children().removeAttr("style");
 		$(window).trigger("toggle");
 		this.save();
 	}
+	// Storage actions \\
+	save() {
+		localStorage.setItem(this.name, JSON.stringify(this.info));
+	}
+	/**
+	 * @param {string|false} name 
+	 */
+	rename(name) {
+		if (name && localStorage.getItem(this.name)) {
+			localStorage.removeItem(this.name);
+			this.name = name;
+			this.save();
+		}
+		else if (name) {
+			this.name = name;
+		}
+	}
+	filify(name) {
+		return name.replace(/[\/\\\:\*\?\"\'\<\>\|\s]/g, "-").replace(/^\-+|\-+$/g, "");
+	}
+	/**
+	 * @param {boolean} sure 
+	 */
+	"delete"(sure) {// delete is keyword but I use ES2019
+		if (sure) {
+			localStorage.removeItem(this.name);
+		}
+	}
+	// Compiling \\
 	getScriptType() {
 		const isTypeScript = $(".is-ts").hasClass("on");
 		const isReact = $(".is-jsx").hasClass("on");
+		// this is condition! Not your if-else or switch (true) {}
 		return (isTypeScript ? "ts" : "js") + (isReact ? 'x' : "");
 	}
 	getStyleType() {
-		return ($(".is-scss").hasClass("on") ? 's' : "") + "css";
+		const isSass = $(".is-sass").hasClass("on");
+		const isSCSS = $(".is-scss").eq(1).hasClass("on");
+		const isLess = $(".is-less").hasClass("on");
+		// I am condition master!
+		return (isSass ? 's' + (isSCSS ? 'c' : 'a') : (isLess ? "le" : 'c')) + "ss";
 	}
 	/** @type {ProjectInfo} */
 	/**
@@ -134,23 +181,16 @@ class Project {
 		</body>
 		</html>`.split("		").join("");
 	}
-	save() {
-		localStorage.setItem(this.name, JSON.stringify(this.info));
-	}
-	/**
-	 * @param {boolean} sure 
-	 */
-	"delete"(sure) {
-		if (sure) {
-			localStorage.removeItem(this.name);
-		}
+	compileHTML() { // simpliest compiler API I found. But that was last one
+		return $(".is-markdown").hasClass("on") ? marked(this.info.md.code, "Maruku") : this.info.html.code;
 	}
 	/**
 	 * @param {string} js 
 	 * @param {(error: string) => string} reject
 	 * @param {"js"|"jsx"|"ts"|"tsx"} type
+	 * @param {boolean} minify
 	 */
-	compileJS(js, reject, type) {
+	compileJS(js, reject, type, minify) {
 		const presets = ["es2017"];
 		/[tj]sx/.test(type) && presets.push("react");
 		/tsx?/.test(type) && presets.push("typescript");
@@ -160,33 +200,63 @@ class Project {
 				plugins: [
 					'transform-class-properties',
 					'transform-object-rest-spread',
-					'syntax-optional-catch-binding'
+					'syntax-optional-catch-binding',
 				],
-				minified: true // use speed
+				minified: minify,
+				comments: !minify
 			}).code;
 		}
-		catch (err) {
-			return reject(err.message);
+		catch (error) {
+			return reject(error.message);
 		}
 	}
 	/**
 	 * @param {string} css
+	 * @param {boolean} compress
 	 * @returns {Promise<string>}
 	 */
-	compileCSS(css) {
-		return new Promise(resolve => {
-			Sass.compile(css, {
-				style: Sass.style.compressed
-			}, code => resolve(code.text));
+	async compileCSS(css, compress) {
+		if (this.info.css.compiler === "css") {
+			return new Promise(resolve => resolve(css));
+		}
+		if (this.info.css.compiler === "less") {
+			try {
+				return (await less.render(css, {compress})).css;
+			} catch (e) { // throw this to main thread for IDE console
+				throw e;
+			}
+		}
+		return new Promise((resolve, reject) => {
+			Sass.compile(css, compress ? {
+				style: Sass.style.compressed,
+				indentedSyntax: this.info.css.compiler === "sass"
+			} : ({status, text, formatted}) => {
+				if (status === 0) {
+					resolve(text);
+				} else {
+					reject(new SyntaxError(formatted));
+				}
+			}, compress && (({status, text, formatted}) => {
+				if (status === 0) {
+					resolve(text);
+				} else {
+					reject(new SyntaxError(formatted));
+				}
+			}));
 		});
 	}
 	async compiled() {
-		const {html: {code: html}, css: {code: css}, js: {code: uncompiled, compiler} } = this.info,
-		javascript = this.compileJS(uncompiled, message => `/* ${message.replace(/\/\*|\*\//gm, "")} */`, compiler);
-		const newDocument = this.parser.parseFromString(html, "text/html"), script = document.createElement("script");
-		script.innerHTML = javascript;
-		const style = document.createElement("style");
-		style.innerHTML = (await this.compileCSS(css)) || "/* ERROR or EMPTY */";
+		let {html: {code: html}, css: {code: css}, js: {code: uncompiled, compiler}} = this.info;
+		const javascript = this.compileJS(uncompiled, error => `/* ${error} */`, compiler);
+		const newDocument = this.parser.parseFromString(this.compileHTML(html), "text/html");
+		const script = this.createCDATA("script", javascript);
+		const style = this.createCDATA("style", await (async () => {
+			try {
+				return await this.compileCSS(css) || "";
+			} catch (error) {
+				return `/* ${error} */`;
+			}
+		})());
 		if (/[tj]sx/.test(this.info.js)) {
 			const react = document.createElement("script");
 			react.src = "https://unpkg.com/react@17/umd/react.production.min.js";
@@ -196,67 +266,206 @@ class Project {
 			newDocument.head.appendChild(react);
 			newDocument.head.appendChild(reactDOM);
 		}
-		newDocument.head.appendChild(style);
-		newDocument.body.appendChild(script);
-		return [
-			"<!-- Generated by MobilCoder -->",
-			this.serializer.serializeToString(newDocument)
-		].join("\n");
-	}
-	async createDocument() {
-		document.querySelector("#console").innerHTML = "";
-		const {html: {code: html}, css: {code: css, compiler: isSass}, js: {code: js, compiler} } = this.info;
-		// open parser because I want to append style and script
-		const newDocument = this.parser.parseFromString(html, "text/html");
-		// create <script> element and write data
-		const script = document.createElement("script");
-		script.innerHTML = this.compileJS(
-			js, /* JSON.stringify encodes quotes (" => \") and
-			wrap the whole string between double quotes (") */
-			message => `console.error(${JSON.stringify(message)});`,
-			compiler
-		);
-		// and now create <style>
-		const style = document.createElement("style");
-		style.innerHTML = isSass === "css" ? css : await this.compileCSS(css);
-		// Sass.js doesn't report complete error with message but returns undefined (stupid).
-		if (style.innerHTML === "undefined" && !!css.trim()) {
-			script.innerHTML += "console.warn('Stylesheet didn\\'t apply because there is an error or it\\'s only empty rulesets.')";
+		if (style.innerHTML) {
+			newDocument.head.appendChild(style);
 		}
+		if (newDocument.body.firstChild) {
+			newDocument.body.insertBefore(script, newDocument.body.firstChild);
+		} else {
+			newDocument.body.appendChild(script);
+		}
+		return this.stringifyDocument(newDocument);
+	}
+	async createFrameContent() {
+		const {
+			html: {code: html},
+			css: {code: css},
+			js: {code: uncompiled, compiler}
+		} = this.info;
+		const js = this.compileJS(
+			uncompiled, /* JSON.stringify encodes quotes (" => \")
+			and wrap the whole string between double quotes (") */
+			error => `console.error(${JSON.stringify(error)});`,
+			compiler, true // use speed
+		);
+		// open parser because I want to append style and script
+		const newDocument = this.parser.parseFromString(this.compileHTML(html), "text/html");
+		// and now create <style>
+		const style = this.createCDATA("style", await (async () => {
+			try {
+				return (await this.compileCSS(css)) || (function() {
+
+				});
+			} catch (error) {
+				js += `console.error(${JSON.stringify(error.message)});`;
+				return "";
+			}
+		})());
+		// create <script> element and write data
+		const script = this.createCDATA("script", js);
 		/* creating an implementation of JavaScript */
-		const ideJS = document.createElement("script");
-		ideJS.src = "data:application/javascript;base64,d2luZG93LmFsZXJ0ID0gYXN5bmMgKGEpID0+IGF3YWl0IHdpbmRvdy5wYXJlbnQuU3dhbC5maXJlKGBDb2RlICR7ZG9jdW1lbnQudGl0bGV9IHNheXM6YCwgYSk7Cgp3aW5kb3cuY29uZmlybSA9IGFzeW5jIChhKSA9PiAoYXdhaXQgd2luZG93LnBhcmVudC5Td2FsLmZpcmUoewoJdGl0bGU6IGBDb2RlICR7ZG9jdW1lbnQudGl0bGV9IGFza3M6YCwKCXRleHQ6IGEsCglzaG93Q2FuY2VsQnV0dG9uOiB0cnVlCn0pKS52YWx1ZTsKCndpbmRvdy5wcm9tcHQgPSBhc3luYyAoYSwgYikgPT4gKGF3YWl0IHdpbmRvdy5wYXJlbnQuU3dhbC5maXJlKHsKCXRpdGxlOiBgQ29kZSAke2RvY3VtZW50LnRpdGxlfSBhc2tzOmAsCgl0ZXh0OiBhLAoJaW5wdXQ6ICJ0ZXh0IiwKCWlucHV0VmFsdWU6IGIKfSkpLnZhbHVlOwoKdmFyIGNvbnNvbGUgPSB7CiAgICBlbGVtZW50OiB3aW5kb3cucGFyZW50LmRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoIiNjb25zb2xlIiksCiAgICBub19kYXRhOiAnPGxpIGNsYXNzPSJ0YWJsZS12aWV3LWNlbGwiIHN0eWxlPSJjb2xvcjogZ3JheTsiPk5vIGRhdGE8L2xpPicsCgllcnJvciguLi5kYXRhKSB7CgkJdGhpcy5lbGVtZW50LmlubmVySFRNTCA9IHRoaXMuZWxlbWVudC5pbm5lckhUTUwucmVwbGFjZSh0aGlzLm5vX2RhdGEsICIiKTsKCQl0aGlzLmVsZW1lbnQuaW5uZXJIVE1MICs9IGA8bGkgY2xhc3M9InRhYmxlLXZpZXctY2VsbCIgc3R5bGU9ImNvbG9yOiByZWQ7Ij5FcnJvcjogJHtkYXRhLmpvaW4oIjxiciAvPiIpfTwvbGk+YAoJfSwKCXdhcm4oLi4uZGF0YSkgewoJCXRoaXMuZWxlbWVudC5pbm5lckhUTUwgPSB0aGlzLmVsZW1lbnQuaW5uZXJIVE1MLnJlcGxhY2UodGhpcy5ub19kYXRhLCAiIik7CgkJdGhpcy5lbGVtZW50LmlubmVySFRNTCArPSBgPGxpIGNsYXNzPSJ0YWJsZS12aWV3LWNlbGwiIHN0eWxlPSJjb2xvcjogeWVsbG93OyI+V2FybmluZzogJHtkYXRhLmpvaW4oIjxiciAvPiIpfTwvbGk+YAoJfSwKCWxvZyguLi5kYXRhKSB7CQogICAgICAgIHRoaXMuZWxlbWVudC5pbm5lckhUTUwgPSB0aGlzLmVsZW1lbnQuaW5uZXJIVE1MLnJlcGxhY2UodGhpcy5ub19kYXRhLCAiIik7CgkJdGhpcy5lbGVtZW50LmlubmVySFRNTCArPSBgPGxpIGNsYXNzPSJ0YWJsZS12aWV3LWNlbGwiPiR7ZGF0YS5qb2luKCI8YnIgLz4iKX08L2xpPmAKCX0sCglpbmZvKC4uLmRhdGEpIHsKICAgICAgICB0aGlzLmVsZW1lbnQuaW5uZXJIVE1MID0gdGhpcy5lbGVtZW50LmlubmVySFRNTC5yZXBsYWNlKHRoaXMubm9fZGF0YSwgIiIpOwoJCXRoaXMuZWxlbWVudC5pbm5lckhUTUwgKz0gYDxsaSBjbGFzcz0idGFibGUtdmlldy1jZWxsIj4ke2RhdGEuam9pbigiPGJyIC8+Iil9PC9saT5gCgl9LAoJdHJhY2UoLi4uZGF0YSkgewogICAgICAgIHRoaXMuZWxlbWVudC5pbm5lckhUTUwgPSB0aGlzLmVsZW1lbnQuaW5uZXJIVE1MLnJlcGxhY2UodGhpcy5ub19kYXRhLCAiIik7CgkJdGhpcy5lbGVtZW50LmlubmVySFRNTCArPSBgPGxpIGNsYXNzPSJ0YWJsZS12aWV3LWNlbGwiPiR7ZGF0YS5qb2luKCI8YnIgLz4iKX08L2xpPmAKCX0sCgljbGVhcigpIHsKCQl0aGlzLmVsZW1lbnQuaW5uZXJIVE1MID0gbm9fZGF0YTsKCX0KfTsKCndpbmRvdy5vbmVycm9yID0gZnVuY3Rpb24gKG1lc3NhZ2UsIF8sIGxpbmUsIGNvbHVtbikgewoJZnVuY3Rpb24gZ2V0T3JkZXIobnVtYmVyKSB7CgkJcmV0dXJuIChudW1iZXIgKyAxKSArIChbCgkJCSJzdCIsICJuZCIsICJyZCIKCQldW251bWJlcl0gfHwgInRoIik7Cgl9Cgljb25zb2xlLmVycm9yKG1lc3NhZ2UsIGBBdCAke2dldE9yZGVyKGxpbmUpfSBjb2x1bW5gLCBgYW5kICR7Z2V0T3JkZXIoY29sdW1uKX0gY29sdW1uIGApOwp9CgpmdW5jdGlvbiByZXF1aXJlKHBhY2thZ2VOYW1lKSB7Cgljb25zb2xlLmVycm9yKCdOb2RlLmpzIGlzIG5vdCBzdXBwb3J0ZWQnKTsKCWNvbnN0IHhociA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwoJeGhyLm9wZW4oIlBPU1QiLCAiaHR0cHM6Ly91bnBrZy5jb20vIiArIHBhY2thZ2VOYW1lKTsKCXhoci5vbnJlYWR5c3RhdGVjaGFuZ2UgPSBmdW5jdGlvbiAoKSB7CgkJY29uc3Qge3N0YXR1cywgcmVzcG9uc2VVUkx9ID0geGhyOwoJCWlmIChzdGF0dXMgPT09IDAgfHwgKHN0YXR1cyA+PSAyMDAgJiYgc3RhdHVzIDwgNDAwKSkgewoJCQlmdW5jdGlvbiBjcmVhdGVUZXh0KHRleHQpIHsKCQkJCXZhciBzcGFuID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgic3BhbiIpOwoJCQkJc3Bhbi5zdHlsZS5jb2xvciA9ICJ5ZWxsb3ciOwoJCQkJc3Bhbi5pbm5lclRleHQgPSB0ZXh0OwoJCQkJcmV0dXJuIHNwYW47CgkJCX0KCQkJY29uc29sZS5lbGVtZW50LmFwcGVuZENoaWxkKGNyZWF0ZVRleHQoIlVzZSBVTlBLRyB1cmwgIikpOwoJCQljb25zdCBsaW5rID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgiYSIpOwoJCQlsaW5rLmlubmVyVGV4dCA9IHJlc3BvbnNlVVJMOwoJCQlsaW5rLm9uY2xpY2sgPSAoKSA9PiB7CgkJCQl3aW5kb3cucGFyZW50LlN3YWwuZmlyZSgKCQkJCQkiVXNlIHRoZSBjb2RlIiwKCQkJCQlgPGNvZGUgY2xhc3M9ImxhbmctaHRtbCIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyBvdmVyZmxvdy14OiBhdXRvOyI+Jmx0O3NjcmlwdCBzcmM9IiR7cmVzcG9uc2VVUkx9IiBjcm9zc29yaWdpbj4mbHQ7L3NjcmlwdD48L2NvZGU+YCwKCQkJCQkiaW5mbyIKCQkJCSk7CgkJCQl3aW5kb3cucGFyZW50LlByaXNtLmhpZ2hsaWdodEVsZW1lbnQod2luZG93LnBhcmVudC5kb2N1bWVudC5xdWVyeVNlbGVjdG9yKCIjc3dhbDItY29udGVudD5jb2RlIikpOwoJCQl9OwoJCQljb25zb2xlLmVsZW1lbnQuYXBwZW5kQ2hpbGQobGluayk7CgkJCWNvbnNvbGUuZWxlbWVudC5hcHBlbmRDaGlsZChjcmVhdGVUZXh0KCIgaW5zdGVhZCIpKTsKCQl9IGVsc2UgaWYgKHN0YXR1cyA9PT0gNDA0KSB7CgkJCWlmIChwYWNrYWdlTmFtZS5zdGFydHNXaXRoKCJAdHlwZXMvIikpIHsKCQkJCWNvbnNvbGUud2FybihgUGFja2FnZSA8cT4ke3BhY2thZ2VOYW1lfTwvcT4gaXNuJ3Qgc3VwcG9ydGVkIGJlY2F1c2UgaXQncyB0eXBpbmcgcGFja2FnZWApOwoJCQl9IGVsc2UgaWYgKC9hc3NlcnR8YnVmZmVyfGNoaWxkX3Byb2Nlc3N8Y2x1c3RlcnxjcnlwdG98ZGdyYW18ZG5zfGRvbWFpbnxldmVudHN8ZnN8aHR0cHxodHRwc3xuZXR8b3N8cHVueWNvZGV8cXVlcnlzdHJpbmd8cmVhZGxpbmV8c3RyZWFtfHN0cmluZ19kZWNvZGVyfHRsc3x0dHl8dXJsfHV0aWx8djh8dm18emxpYnx0aW1lcnN8cGF0aC8udGVzdChwYWNrYWdlTmFtZSkpIHsKCQkJCWNvbnNvbGUud2FybihgUGFja2FnZSA8cT4ke3BhY2thZ2VOYW1lfTwvcT4gaXNuJ3Qgc3VwcG9ydGVkIGJlY2F1c2UgaXQncyBiYWNrZW5kYCk7CgkJCX0gZWxzZSBpZiAocGFja2FnZU5hbWUuc3RhcnRzV2l0aCgiQGJhYmVsLyIpKSB7CgkJCQljb25zb2xlLndhcm4oIkNvbXBpbGVyIGFscmVhZHkgdXNlcyBCYWJlbC4gRG9uJ3QgdXNlIGl0LiIpCgkJCX0gZWxzZSBpZiAoL25vZGUtc2Fzc3xyZWFjdHxyZWFjdC1kb20vLmluY2x1ZGVzKHBhY2thZ2VOYW1lKSkgewoJCQkJY29uc29sZS53YXJuKGBQYWNrYWdlIDxxPiR7cGFja2FnZU5hbWV9PC9xPiBpcyBidWlsdC1pbiBieSBjb21waWxlci4gRG9uJ3QgdXNlIGl0YCk7CgkJCX0gZWxzZSB7CgkJCQljb25zb2xlLndhcm4oYFBhY2thZ2UgPHE+JHtwYWNrYWdlTmFtZX08L3E+IGRvZXNuJ3QgZXhpc3RgKTsKCQkJfQoJCX0KCX0KCXhoci5zZW5kKG51bGwpOwoJdGhyb3cgbmV3IFJlZmVyZW5jZUVycm9yKCJVbmNhdWdodCBSZWZlcmVuY2VFcnJvcjogcmVxdWlyZSBpcyBub3QgZGVmaW5lZCIpOwp9OwoKT2JqZWN0LmRlZmluZVByb3BlcnR5KGRvY3VtZW50LCAidGl0bGUiLCB7CglnZXQoKSB7CgkJcmV0dXJuIHdpbmRvdy5wYXJlbnQuZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoInRpdGxlIikuaW5uZXJUZXh0OwogICAgfSwKICAgIHNldCh0aXRsZSkgewogICAgICAgIHdpbmRvdy5wYXJlbnQuZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoInRpdGxlIikuaW5uZXJUZXh0ID0gdGl0bGU7CiAgICB9LAogICAgY29uZmlndXJhYmxlOiB0cnVlCn0pOw==";
-		// code: see ide.js
-		const ideCSS = document.createElement("style");
-		ideCSS.innerHTML = "html{font-family:Arial,Helvetica,sans-serif}*{box-sizing: border-box;}";
+		const ideJS = this.createCDATA("script", $("#use-swal").hasClass("on") ? `
+			(function({Swal}) {
+				window.prompt = async (text, inputValue = "") => {
+					if (typeof inputValue !== "number") {
+						inputValue = inputValue.toString();
+					}
+					text = text.toString();
+					const input = (typeof inputValue).replace("string", "text");
+					return (await Swal.fire({
+						title: \`Code \${document.title} asks:\`,
+						text, input, inputValue
+					})).value;
+				};
+
+				window.alert = async (a) => void await Swal.fire(\`Code \${document.title} says:\`, a.toString());
+				window.confirm = async (a) => (await Swal.fire({
+					title: \`Code \${document.title} asks:\`;
+					text: a, showCancelButton: true
+				})).isConfirmed;
+			})(parent);` : "" + `			
+			var console = {
+				element: window.parent.document.querySelector("#console"),
+				no_data: '<li class="table-view-cell" style="color: gray;">No data</li>',
+				error(...data) {
+					if (data.length === 0) return;
+					this.element.innerHTML = this.element.innerHTML.replace(this.no_data, "");
+					this.element.innerHTML += \`<li class="table-view-cell" style="color: red;">Error: \${data.join("<br />")}</li>\`
+				},
+				warn(...data) {
+					if (data.length === 0) return;
+					this.element.innerHTML = this.element.innerHTML.replace(this.no_data, "");
+					this.element.innerHTML += \`<li class="table-view-cell" style="color: yellow;">Warning: \${data.join("<br />")}</li>\`
+				},
+				log(...data) {
+					if (data.length === 0) return;
+					this.element.innerHTML = this.element.innerHTML.replace(this.no_data, "");
+					this.element.innerHTML += \`<li class="table-view-cell">\${data.join("<br />")}</li>\`
+				},
+				info(...data) {
+					if (data.length === 0) return;
+					this.element.innerHTML = this.element.innerHTML.replace(this.no_data, "");
+					this.element.innerHTML += \`<li class="table-view-cell">\${data.join("<br />")}</li>\`
+				},
+				trace() {
+					try {
+						throw new Error();
+					} catch (e) {
+						const [line, col] = /(\d+):(\d+)$/.exec(e.stack);
+						this.log("Trace", "line " + line, "column " + col);
+					}
+				},
+				clear() {
+					this.element.innerHTML = no_data;
+				}
+			};
+			
+			window.onerror = function (message, _, line, column) {
+				function getOrder(number) {
+					return (number + 1) + ([
+						"st", "nd", "rd"
+					][number] || "th");
+				}
+				console.error(message, \`At \${getOrder(line)} column\`, \`and \${getOrder(column)} column \`);
+			}
+			
+			function require(packageName) {
+				console.error('Node.js is not supported');
+				const xhr = new XMLHttpRequest();
+				xhr.open("POST", "https://unpkg.com/" + packageName);
+				xhr.onreadystatechange = function () {
+					const {status, responseURL} = xhr;
+					if (status === 0 || (status >= 200 && status < 400)) {
+						function createText(text) {
+							var span = document.createElement("span");
+							span.style.color = "yellow";
+							span.innerText = text;
+							return span;
+						}
+						console.element.appendChild(createText("Use UNPKG url "));
+						const link = document.createElement("a");
+						link.innerText = responseURL;
+						link.onclick = () => {
+							window.parent.Swal.fire(
+								"Use the code",
+								\`<code class="lang-html" style="display: block; white-space: nowrap; overflow-x: auto;">&lt;script src="\${responseURL}" crossorigin>&lt;/script></code>\`,
+								"info"
+							);
+							window.parent.Prism.highlightElement(window.parent.document.querySelector("#swal2-content>code"));
+						};
+						console.element.appendChild(link);
+						console.element.appendChild(createText(" instead"));
+					} else if (status === 404) {
+						if (packageName.startsWith("@types/")) {
+							console.warn(\`Package <q>\${packageName}</q> isn't supported because it's typing package\`);
+						} else if (/assert|buffer|child_process|cluster|crypto|dgram|dns|domain|events|fs|http|https|net|os|punycode|querystring|readline|stream|string_decoder|tls|tty|url|util|v8|vm|zlib|timers|path/.test(packageName)) {
+							console.warn(\`Package <q>\${packageName}</q> isn't supported because it's backend\`);
+						} else if (packageName.startsWith("@babel/")) {
+							console.warn("Compiler already uses Babel. Don't use it.")
+						} else if (/node-sass|react|react-dom/.includes(packageName)) {
+							console.warn(\`Package <q>\${packageName}</q> is built-in by compiler. Don't use it\`);
+						} else {
+							console.warn(\`Package <q>\${packageName}</q> doesn't exist\`);
+						}
+					}
+				}
+				xhr.send(null);
+				throw new ReferenceError("Uncaught ReferenceError: require is not defined");
+			};
+			
+			Object.defineProperty(document, "title", {
+				get() {
+					return window.parent.document.getElementById("title").innerText;
+				},
+				set(title) {
+					window.parent.document.getElementById("title").innerText = title;
+				},
+				configurable: true
+			});
+		`);
+		const ideCSS = this.createCDATA("style", "html{font-family:Arial,Helvetica,sans-serif}*{box-sizing: border-box;}");
 		// use React because Babel compiles JSX to React.createElement
-		if (/[tj]sx/.test(this.getScriptType())) {
-			const react = document.createElement("script");
-			react.src = "data:application/javascript;base64,dmFyIHtSZWFjdCwgUmVhY3RET019ID0gd2luZG93LnBhcmVudDs=";
-			// code: var {React, ReactDOM} = window.parent;
-			newDocument.head.appendChild(react);
+		if (/[tj]sx/.test(compiler)) {
+			newDocument.head.appendChild(this.createCDATA("script", "var {React, ReactDOM} = window.parent;"));
 		}
 		// appending
-		newDocument.head.appendChild(style);
 		newDocument.head.appendChild(ideCSS);
-		newDocument.body.appendChild(script);
+		newDocument.head.appendChild(style);
 		newDocument.head.appendChild(ideJS);
-		(function ide() {
-			// setting title
-			$("#title").text(newDocument.title || "Document");
-			// controling console in implementation
-			$("#console").html('<li class="table-view-cell" style="color: gray;">No data</li>');
-		})();
-		// Set the iframe's src to about:blank so
-		// that it conforms to the same-origin policy 
-		this.iFrame.src = this.iFrame.src;
-		// Set the iframe's new HTML
-		this.iFrame.contentDocument.open();
-		this.iFrame.contentDocument.write(this.serializer.serializeToString(newDocument));
-		this.iFrame.contentDocument.close();
+		if (newDocument.body.firstChild) {
+			newDocument.body.insertBefore(script, newDocument.body.firstChild);
+		} else {
+			newDocument.body.appendChild(script);
+		}
+		if (!newDocument.title) {
+			newDocument.head.appendChild(this.createCDATA("script", "console.warn('Valid document must have title');"));
+		}
+		// setting title
+		$("#title").text(newDocument.title || "[no title]");
+		// controling console in implementation
+		$("#console").html('<li class="table-view-cell" style="color: gray;">No data</li>');
+		// Appending whole the HTML to iFrame
+		this.iFrame.srcdoc = this.stringifyDocument(newDocument);
 	}
-	filify(name) {
-		return name.replace(/[\/\\\:\*\?\"\'\<\>\|\s]/g, "-").replace(/^\-+|\-+$/g, "");
+	/**
+	 * 
+	 * @param {"style" | "script"} nodeName 
+	 */
+	createCDATA(nodeName, content) {
+		const result = document.createElement(nodeName);
+		result.textContent = content;
+		return result;
+		/*
+		 * This method is very useful, more than you think 
+		 * Example code: createCDATA("div", "&").innerHTML => &amp;
+		 */
+	}
+	/**
+	 * @param {Document} document 
+	 */
+	stringifyDocument(document) {
+		document.insertBefore(new Comment("Generated with MobilCoder"), document.documentElement);
+		return (document.doctype ? this.serializer.serializeToString(document.doctype) : "<!DOCTYPE html>") + "\n" + document.documentElement.outerHTML;
 	}
 }
 
@@ -266,16 +475,13 @@ class PlainProject extends Project {
 		super("Plain Project");
 		this.load();
 	}
-
 	save() {
 		// don't save.
 	}
-	/**
-	 * @param {string} name
-	 */
-	toSavableProject(name) {
-		const result = new Project(name || this.name);
+	toSavableProject(name = this.name) {
+		const result = new Project(name);
 		result.info = this.info;
+		result.save();
 		return result;
 	}
 }

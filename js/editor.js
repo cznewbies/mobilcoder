@@ -1,10 +1,11 @@
-/**
- * @typedef {<T extends HTMLElement>(editor: jQuery<T>, highlight: (editor: T) => void, ...args) => {
+/** 
+ * @typedef {{
  * 	updateCode(code: string): void;
  *  onUpdate(cb: (code: T["textContent"]) => void): void;
  *  toString: () => T["textContent"];
  *  destroy(): void;
- *	}} CodeJar
+ *	}} CodeJarPrototype
+ * @typedef {<T extends HTMLElement>(editor: jQuery<T>, highlight: (editor: T) => void, ...args) => CodeJarPrototype} CodeJar
  * @type {CodeJar}
  */
 const CodeJar = (editor, highlight) => {
@@ -34,7 +35,7 @@ const CodeJar = (editor, highlight) => {
 		restore(pos);
 	}, 30);
 	let recording = false;
-	const shouldRecord = (event) => {
+	const shouldRecord = event => {
 		return !isUndo(event) && !isRedo(event)
 			&& event.key !== "Meta"
 			&& event.key !== "Control"
@@ -54,7 +55,7 @@ const CodeJar = (editor, highlight) => {
 	on("keydown", event => {
 		if (event.defaultPrevented) {
 			return;
-		}	
+		}
 		prev = toString();
 		handleNewLine(event);
 		handleTabCharacters(event);
@@ -93,7 +94,7 @@ const CodeJar = (editor, highlight) => {
 	});
 	function save() {
 		const s = window.getSelection();
-		const pos = { start: 0, end: 0, dir: undefined };
+		const pos = {start: 0, end: 0, dir: undefined};
 		visit(editor, el => {
 			if (el === s.anchorNode && el === s.focusNode) {
 				pos.start += s.anchorOffset;
@@ -248,7 +249,7 @@ const CodeJar = (editor, highlight) => {
 					const pos = save();
 					// Remove full length tab or just remaining padding
 					const len = Math.min(options.tab.length, padding.length);
-					restore({ start, end: start + len });
+					restore({start, end: start + len});
 					document.execCommand("delete");
 					pos.start -= len;
 					pos.end -= len;
@@ -297,7 +298,7 @@ const CodeJar = (editor, highlight) => {
 				return;
 		}
 		at++;
-		history[at] = { html, pos };
+		history[at] = {html, pos};
 		history.splice(at + 1);
 		const maxHistory = 300;
 		if (at > maxHistory) {
@@ -311,7 +312,7 @@ const CodeJar = (editor, highlight) => {
 		const pos = save();
 		insert(text);
 		highlight(editor);
-		restore({ start: pos.end + text.length, end: pos.end + text.length });
+		restore({start: pos.end + text.length, end: pos.end + text.length});
 	}
 	function visit(editor, visitor) {
 		const queue = [];
@@ -377,7 +378,7 @@ const CodeJar = (editor, highlight) => {
 			}
 		}
 	};
-}
+};
 /**
  * @param {string} text 
  */

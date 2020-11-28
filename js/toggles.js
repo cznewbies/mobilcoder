@@ -7,7 +7,7 @@
  * Licensed under MIT (https://github.com/twbs/ratchet/blob/master/LICENSE)
  * ======================================================================== */
 
-!(function () {
+!(function() {
 	'use strict';
 
 	var start = {};
@@ -15,7 +15,7 @@
 	var distanceX = false;
 	var toggle = false;
 
-	var findToggle = function (target) {
+	var findToggle = function(target) {
 		var i;
 		var toggles = document.querySelectorAll('.toggle');
 
@@ -29,7 +29,7 @@
 	};
 	try {
 		document.createEvent("TouchEvent");
-		window.addEventListener('touchstart', function (e) {
+		window.addEventListener('touchstart', function(e) {
 			e = e.originalEvent || e;
 
 			toggle = findToggle(e.target);
@@ -43,11 +43,11 @@
 			var handleWidth = handle.clientWidth;
 			var offset = toggle.classList.contains('on') ? (toggleWidth - handleWidth) : 0;
 
-			start = { pageX: e.touches[0].pageX - offset, pageY: e.touches[0].pageY };
+			start = {pageX: e.touches[0].pageX - offset, pageY: e.touches[0].pageY};
 			touchMove = false;
 		});
 
-		window.addEventListener('touchmove', function (e) {
+		window.addEventListener('touchmove', function(e) {
 			e = e.originalEvent || e;
 
 			if (e.touches.length > 1) {
@@ -85,7 +85,7 @@
 			toggle.classList[(distanceX > (toggleWidth / 2 - handleWidth / 2)) ? 'add' : 'remove']('on');
 		});
 
-		window.addEventListener('touchend', function (e) {
+		window.addEventListener('touchend', function(e) {
 			if (!toggle) {
 				return;
 			}
@@ -105,7 +105,7 @@
 			toggle.classList[slideOn ? 'add' : 'remove']('on');
 
 			e = new CustomEvent('toggle', {
-				detail: { isActive: slideOn },
+				detail: {isActive: slideOn},
 				bubbles: true,
 				cancelable: true
 			});
@@ -116,7 +116,7 @@
 			toggle = false;
 		});
 	} catch {
-		window.addEventListener("click", function (e) {
+		window.addEventListener("click", function(e) {
 			toggle = findToggle(e.target);
 
 			if (!toggle) {

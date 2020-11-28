@@ -7,14 +7,14 @@ class AdManager {
 		this.index = 0;
 
 		// AdMob implementation
-		document.addEventListener("deviceready", () => {			
+		document.addEventListener("deviceready", () => {
 			// AdMob options
 			admob.setOptions({
 				bannerAdId: interstitialAdId,
 				interstitialAdId,
 				autoShowInterstitial: true
 			});
-			
+
 			this.unsafeAd = () => {
 				if (this.index % 3 === 0) {
 					return admob.requestInterstitialAd();
@@ -46,7 +46,7 @@ var ProjectManager = new (class ProjectManager {
 	 */
 	constructor(actualProject) {
 		this.actualProject = actualProject;
-		this.parent = $("#projects .table-view");
+		this.parent = $("#projects .table-view").css("margin-bottom", "50px");
 		/* by this token, you can't hack me. that's like
 		bill with my name, if you use it, I'll get money */
 		this.adManager = new AdManager("ca-app-pub-1393197938476976/1676619570");
@@ -54,9 +54,9 @@ var ProjectManager = new (class ProjectManager {
 		/** @type {"delete" | "rename" | false} */
 		this.selecting = false;
 		$("#projects header .icon").on("click", ({target}) => {
-			this.selecting = target.id;
+			if (this.selecting) return; this.selecting = target.id;
 			$("header, nav, li:not(.project)").css("filter", "blur(2px)");
-			console.log("Click to project you want to " + target.id);
+			this.info("Choose the project you want to " + target.id);
 		});
 
 		// updating output
@@ -70,23 +70,17 @@ var ProjectManager = new (class ProjectManager {
 			if (!this.actualProject) {
 				await this.adManager.showAd();
 				this.actualProject = new PlainProject();
-				console.log("Opened without project");
+				this.info("Opened without project");
 			}
 		});
 		this.showProjects();
 		$("#new").on("click", async () => {
 			if (this.selecting) return;
-			const {value} = await Swal.fire({
-				input: "text",
-				icon: "question",
-				title: "Create new project",
-				inputPlaceholder: "Name...",
-				showCancelButton: true,
-				inputValidator: value => (!value.trim() && "You must name the project") || (value === "-mobilcoder-theme"  && "Invalid name") || (this.getAll().some(project => project.name === value) && `Project ${value} already exists`)
-			});
+			const name = await this.getProjectName("Create new project");
+			if (!name) return;
 			await this.adManager.showAd();
 			this.actualProject && this.actualProject.destroy();
-			this.actualProject = new Project(value);
+			this.actualProject = new Project(name);
 			this.actualProject.load();
 			Swal.fire({
 				icon: "success",
@@ -95,7 +89,7 @@ var ProjectManager = new (class ProjectManager {
 				showCancelButton: true,
 				cancelButtonText: "No",
 				confirmButtonText: "Yes"
-			}).then(({value}) => value && this.close());
+			}).then(({value}) => value ? this.close() : this.info("Then tab to <q>Code</q>"));
 		});
 		$("#plain").on("click", async () => {
 			await this.adManager.showAd();
@@ -116,13 +110,40 @@ var ProjectManager = new (class ProjectManager {
 	divider(name) {
 		return $("<li>").addClass("table-view-divider").html(name);
 	}
+	toggle(on = false) {
+		return $("<div>").addClass("toggle" + (on ? " on" : "")).append($("<div>").addClass("toggle-handle"));
+	}
 	close() {
 		$("#projects").removeClass("active");
 	}
 	showProjects() {
-		this.get("li.table-view-divider, li.project").remove();
-		this.parent.prepend(this.divider("New project").css("margin-top", "43px"));
-	
+		this.get("li.table-view-divider, li.project, li.settings").remove();
+		this.parent.prepend(this.divider("New project"));
+
+
+		$("#plain").html(this.actualProject instanceof PlainProject ? "Reset code" : "Continue without project");
+
+		if (this.actualProject instanceof PlainProject) {
+			this.parent.append(
+				$("<li>").addClass("table-view-cell settings").append(
+					$("<a>").addClass("navigate-right").html("Save actual progress").on("click", async () => {
+						const name = await this.getProjectName("Save actual code...");
+						if (name) {
+							this.actualProject = this.actualProject.toSavableProject(name);
+							this.showProjects();
+							$(this).hide();
+						}
+					})
+				)
+			);
+		}
+
+		this.parent.append(
+			this.divider("Settings"),
+			$("<li>").addClass("table-view-cell settings").text("Dark theme").append(this.toggle($("#mode").attr("href").includes("dark")).on("toggle", ({detail: {isActive}}) => $(isActive ? "#dark" : "#light").trigger("click"))),
+			$("<li>").addClass("table-view-cell settings").text("Use prettier (async) dialogs").attr("id", "use-swal").append(this.toggle(true))
+		);
+
 		const projects = this.getAll();
 		if (projects.length) {
 			this.parent.append(this.divider("Already created").append($("<input>").attr({
@@ -133,44 +154,37 @@ var ProjectManager = new (class ProjectManager {
 				right: 0, top: 0,
 				height: "100%",
 				width: 0,
-				padding: 0,
-				transition: "all 0.6s"
-			}).on("input", function () {
-				$(".project").show().filter((_, el) => !el.childNodes[0].childNodes[0].nodeValue.toLowerCase().includes(this.value.toLowerCase())).hide();
-			}).on("blur", () => $(".project").show())).append($("<span>").addClass("icon icon-search").css({
+				padding: 0
+			}).on("input", function() {
+				$(".project").show(200).filter((_, el) => !el.childNodes[0].childNodes[0].nodeValue.toLowerCase().includes(this.value.toLowerCase())).hide(200);
+			}).on("blur", () => $(".project").show(200))).append($("<span>").addClass("icon icon-search").css({
 				position: "absolute",
 				right: "5%",
 				fontSize: "inherit",
 				padding: "2px"
 			}).on("click", ({target}) => {
 				const open = $(target).hasClass("icon-search");
-				$(target).toggleClass("icon-search icon-close").siblings("input").css(
-					open ? {
-						width: "100%",
-						padding: "0 10px"
-					} : {
-						width: 0,
-						padding: 0
-					}
+				$(target).toggleClass("icon-search icon-close").siblings("input").val("").animate(
+					{
+						width: open ? "100%" : 0,
+						padding: open ? "0 10px" : 0
+					},
+					600
 				).trigger(open ? "focus" : "blur");
 			})));
 		}
-	
+
 		for (const project of projects) {
-			const compiler = project.info.js.compiler;	
+			const compiler = project.info.js.compiler;
 			this.parent.append(
 				$("<li>").addClass("table-view-cell project").append(
 					$("<a>").addClass("navigate-right").text(project.name).on("click", async () => {
 						if (this.selecting) {
-							project[this.selecting]((await Swal.fire({
-								input: this.selecting === "delete" ? undefined : "text", showCancelButton: true, icon: "warning",
-								title: `${this.selecting[0].toUpperCase()}${this.selecting.substr(1)} project <q>${project.name}</q>`,
-								inputValidator(value) {
-									return (!value.trim() && "You must name the project")
-										|| (value === "-mobilcoder-theme"  && "Invalid name")
-										|| (projects.some(project => project.name === value) && `Project <q>${value}</q> already exists`);
-								}
-							})).value);
+							const title = `${this.selecting[0].toUpperCase()}${this.selecting.substr(1)} project <q>${project.name}</q>`;
+							project[this.selecting](this.selecting === "delete" ? (await Swal.fire({
+								showCancelButton: true,
+								icon: "warning", title,
+							})).value : await this.getProjectName(title));
 							this.selecting = false;
 							$("header, nav, li").css("filter", "");
 							this.showProjects();
@@ -181,21 +195,21 @@ var ProjectManager = new (class ProjectManager {
 							this.actualProject.load();
 							this.close();
 						}
-					}).append(`<span class="badge badge-${compiler.substr(0,2)} badge-${/x/.test(compiler) && "inverted"}">${compiler.toUpperCase()}</span>`)
+					}).append(`<span class="badge badge-${compiler.substr(0, 2)} badge-${/x/.test(compiler) && "inverted"}">${compiler.toUpperCase()}</span>`)
 				)
 			);
 		}
 	}
 	getAll() {
-		return Object.entries(localStorage).filter(function ([name, value]) {
-			return !!localStorage.getItem(name) && (function (data) {
+		return Object.entries(localStorage).filter(function([name, value]) {
+			return !!localStorage.getItem(name) && (function(data) {
 				try {
-					JSON.parse(data)
+					JSON.parse(data);
 					return true;
 				} catch {
 					return false;
 				}
-			})(value) && (function (object, keys) {
+			})(value) && (function(object, keys) {
 				for (const key of keys) {
 					if (!object.hasOwnProperty(key)) {
 						return false;
@@ -213,5 +227,29 @@ var ProjectManager = new (class ProjectManager {
 		const result = new Project(name);
 		result.info = info;
 		return result;
+	}
+	/**
+	 * @param {string} title 
+	 */
+	info(title) {
+		Swal.fire({
+			toast: true, icon: "info",
+			showConfirmButton: false,
+			timer: 1000, title,
+			position: "bottom"
+		});
+	}
+	/**
+	 * @param {string} title 
+	 * @returns {Promise<string>}
+	 */
+	async getProjectName(title) {
+		return (await Swal.fire({
+			input: "text",
+			icon: "question", title,
+			inputPlaceholder: "Name...",
+			showCancelButton: true,
+			inputValidator: value => (!value.trim() && "You must name the project") || (value === "-mobilcoder-theme" && "Invalid name") || (this.getAll().some(project => project.name === value) && `Project ${value} already exists`)
+		})).value;
 	}
 })(null);
