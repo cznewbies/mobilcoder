@@ -141,7 +141,6 @@ var ProjectManager = new (class ProjectManager {
 		this.parent.append(
 			this.divider("Settings"),
 			$("<li>").addClass("table-view-cell settings").text("Dark theme").append(this.toggle($("#mode").attr("href").includes("dark")).on("toggle", ({detail: {isActive}}) => $(isActive ? "#dark" : "#light").trigger("click"))),
-			$("<li>").addClass("table-view-cell settings").text("Use prettier (async) dialogs").attr("id", "use-swal").append(this.toggle(true))
 		);
 
 		const projects = this.getAll();

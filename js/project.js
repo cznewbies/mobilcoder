@@ -304,26 +304,7 @@ class Project {
 		// create <script> element and write data
 		const script = this.createCDATA("script", js);
 		/* creating an implementation of JavaScript */
-		const ideJS = this.createCDATA("script", $("#use-swal").hasClass("on") ? `
-			(function({Swal}) {
-				window.prompt = async (text, inputValue = "") => {
-					if (typeof inputValue !== "number") {
-						inputValue = inputValue.toString();
-					}
-					text = text.toString();
-					const input = (typeof inputValue).replace("string", "text");
-					return (await Swal.fire({
-						title: \`Code \${document.title} asks:\`,
-						text, input, inputValue
-					})).value;
-				};
-
-				window.alert = async (a) => void await Swal.fire(\`Code \${document.title} says:\`, a.toString());
-				window.confirm = async (a) => (await Swal.fire({
-					title: \`Code \${document.title} asks:\`;
-					text: a, showCancelButton: true
-				})).isConfirmed;
-			})(parent);` : "" + `			
+		const ideJS = this.createCDATA("script", `			
 			var console = {
 				element: window.parent.document.querySelector("#console"),
 				no_data: '<li class="table-view-cell" style="color: gray;">No data</li>',
@@ -351,7 +332,8 @@ class Project {
 					try {
 						throw new Error();
 					} catch (e) {
-						const [line, col] = /(\d+):(\d+)$/.exec(e.stack);
+						//const [_, line, col] = /(\d+):(\d+)$/gm.exec(e.stack);
+						parent.console.log(e.stack);
 						this.log("Trace", "line " + line, "column " + col);
 					}
 				},
@@ -423,7 +405,7 @@ class Project {
 				configurable: true
 			});
 		`);
-		const ideCSS = this.createCDATA("style", "html{font-family:Arial,Helvetica,sans-serif}*{box-sizing: border-box;}");
+		const ideCSS = this.createCDATA("style", "html{font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box;}");
 		// use React because Babel compiles JSX to React.createElement
 		if (/[tj]sx/.test(compiler)) {
 			newDocument.head.appendChild(this.createCDATA("script", "var {React, ReactDOM} = window.parent;"));
