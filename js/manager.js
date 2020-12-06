@@ -22,12 +22,34 @@ class AdManager {
 				this.index = (this.index + 1) % 3;
 				return Promise.resolve();
 			};
+			// file handler
+			cordova.openwith.addHandler(intent => {
+				if (intent.items.length) {
+					cordova.openwith.load(intent.items[0], data => {
+						(function() {
+							this.actualProject && this.actualProject.destroy();
+							this.actualProject = new Project(intent.items[0].name || "Opened file");
+							this.actualProject.info.html.code = atob(data);
+							this.actualProject.load();
+							this.close();
+						}).call(ProjectManager);
+						if (intent.exit) {
+							cordova.openwith.exit();
+						}
+					});
+				} else if (intent.exit) {
+					cordova.openwith.exit();
+				}
+			});
 		}, true);
 	}
 
 	/**
 	 * I can return error in case ad can't be
 	 * loaded (e.g. because of no connection)
+	 * 
+	 * I am overriden in device ready event
+	 * because MobilCoder is available on web too.
 	 */
 	unsafeAd() {
 		return Promise.resolve();
@@ -39,8 +61,7 @@ class AdManager {
 		} catch {}
 	}
 }
-
-var ProjectManager = new (class ProjectManager {
+var ProjectManager = new (class ProjectManager { // I am global for developers
 	/**
 	 * @param {Project} actualProject 
 	 */
@@ -89,7 +110,7 @@ var ProjectManager = new (class ProjectManager {
 				showCancelButton: true,
 				cancelButtonText: "No",
 				confirmButtonText: "Yes"
-			}).then(({value}) => value ? this.close() : this.info("Then tab to <q>Code</q>"));
+			}).then(({value}) => value ? this.close() : this.info("Then tap to <q>Code</q>", this.showProjects));
 		});
 		$("#plain").on("click", async () => {
 			await this.adManager.showAd();
@@ -131,7 +152,6 @@ var ProjectManager = new (class ProjectManager {
 						if (name) {
 							this.actualProject = this.actualProject.toSavableProject(name);
 							this.showProjects();
-							$(this).hide();
 						}
 					})
 				)
@@ -140,7 +160,11 @@ var ProjectManager = new (class ProjectManager {
 
 		this.parent.append(
 			this.divider("Settings"),
-			$("<li>").addClass("table-view-cell settings").text("Dark theme").append(this.toggle($("#mode").attr("href").includes("dark")).on("toggle", ({detail: {isActive}}) => $(isActive ? "#dark" : "#light").trigger("click"))),
+			$("<li>").addClass("table-view-cell settings").text("Dark theme").append(
+				this.toggle(
+					$("#mode").attr("href").includes("dark")
+				).on("toggle", ({detail: {isActive}}) => $(isActive ? "#dark" : "#light").trigger("click"))
+			),
 		);
 
 		const projects = this.getAll();
@@ -154,22 +178,23 @@ var ProjectManager = new (class ProjectManager {
 				height: "100%",
 				width: 0,
 				padding: 0
-			}).on("input", function() {
-				$(".project").show(200).filter((_, el) => !el.childNodes[0].childNodes[0].nodeValue.toLowerCase().includes(this.value.toLowerCase())).hide(200);
+			}).on("keyup paste", function() {
+				$(".project").show(200).filter((_, el) => !new RegExp(`\\b${this.value.trim()}`, "i").test(el.childNodes[0].childNodes[0].nodeValue)).hide(200);
 			}).on("blur", () => $(".project").show(200))).append($("<span>").addClass("icon icon-search").css({
 				position: "absolute",
 				right: "5%",
 				fontSize: "inherit",
 				padding: "2px"
-			}).on("click", ({target}) => {
-				const open = $(target).hasClass("icon-search");
-				$(target).toggleClass("icon-search icon-close").siblings("input").val("").animate(
+			}).one("click", function toggleInput() {
+				const open = $(this).hasClass("icon-search");
+				$(this).toggleClass("icon-search icon-close").siblings("input").val("").animate(
 					{
 						width: open ? "100%" : 0,
 						padding: open ? "0 10px" : 0
 					},
 					600
 				).trigger(open ? "focus" : "blur");
+				setTimeout(() => $(this).one("click", toggleInput), 600);
 			})));
 		}
 
@@ -230,13 +255,14 @@ var ProjectManager = new (class ProjectManager {
 	/**
 	 * @param {string} title 
 	 */
-	info(title) {
+	info(title, callback = () => {}) {
 		Swal.fire({
 			toast: true, icon: "info",
 			showConfirmButton: false,
 			timer: 1000, title,
 			position: "bottom"
 		});
+		callback.call(this); // I call after showing, not hiding popup
 	}
 	/**
 	 * @param {string} title 

@@ -21,9 +21,6 @@ for (const char of "{}[]();,<>?'\"") {
 $("header>.btn").on("click", function() {
 	if (!$(this).hasClass("active")) {
 		$("#mode").attr("href", `css/${this.id}.css`);
-		(StatusBar || {
-
-		})[this.id == "dark" ? "styleLightContent" : "styleDefault"]()
 		$(".btn").toggleClass("active");
 		localStorage.setItem("-mobilcoder-theme", "#" + this.id);
 	}

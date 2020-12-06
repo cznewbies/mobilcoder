@@ -33,7 +33,7 @@ class Project {
 			}
 		};
 		this.iFrame = document.querySelector("iframe");
-		this.name = name;
+		this.name = name.trim();
 		/** @type {EditorCache} */
 		this.editors = {};
 		this.createFrameContent = this.createFrameContent.bind(this);
@@ -304,11 +304,17 @@ class Project {
 		// create <script> element and write data
 		const script = this.createCDATA("script", js);
 		/* creating an implementation of JavaScript */
-		const ideJS = this.createCDATA("script", `			
-			var console = {
+		const ideJS = this.createCDATA("script", `		
+			var console = new Proxy({
 				element: window.parent.document.querySelector("#console"),
 				no_data: '<li class="table-view-cell" style="color: gray;">No data</li>',
+				timers: {},
 				error(...data) {
+					if (data.length === 0) return;
+					this.element.innerHTML = this.element.innerHTML.replace(this.no_data, "");
+					this.element.innerHTML += \`<li class="table-view-cell" style="color: red;">Error: \${data.join("<br />")}</li>\`
+				},
+				exception(...data) {
 					if (data.length === 0) return;
 					this.element.innerHTML = this.element.innerHTML.replace(this.no_data, "");
 					this.element.innerHTML += \`<li class="table-view-cell" style="color: red;">Error: \${data.join("<br />")}</li>\`
@@ -328,19 +334,44 @@ class Project {
 					this.element.innerHTML = this.element.innerHTML.replace(this.no_data, "");
 					this.element.innerHTML += \`<li class="table-view-cell">\${data.join("<br />")}</li>\`
 				},
-				trace() {
-					try {
-						throw new Error();
-					} catch (e) {
-						//const [_, line, col] = /(\d+):(\d+)$/gm.exec(e.stack);
-						parent.console.log(e.stack);
-						this.log("Trace", "line " + line, "column " + col);
-					}
-				},
 				clear() {
 					this.element.innerHTML = no_data;
+				},
+				timer(name = "default") {
+					this.timers[name] = Date.now();
+				},
+				timeLog(name = "default") {
+					const timer = this.timers[name];
+					if (!timer) {
+						this.error("Timer <q>" + name + "</q> doesn't exist");
+					} else {
+						this.log(\`Timer <q>\${name}</q>: \${Date.now() - timer} ms\`)
+					}
+				},
+				timeEnd(name = "default") {
+					this.timeLog(name);
+					delete this.timers[name];
 				}
-			};
+			}, {
+				get(console, property) {
+					if (/dir|dirxml|assert|count|countReset|debug|group|groupCollapsed|groupEnd|profileEnd|table|timeStamp|trace/.test(property)) {
+						throw new ReferenceError("console." + property + " is not supported in MobilCoder");
+					} else if (typeof console[property] != "function") {
+						return undefined;
+					} else {
+						return console[property].bind(console);
+						/* I must bind because inside functions
+						must be accesible no_data property.
+						And also, user will see function() { [native code] }
+						in toString() which is better for secret.
+						(BTW user can go to GitHub but that doesn't matter)
+						*/
+					}
+				},
+				set(console) {
+					console.error("Cannot override console property")
+				}
+			});
 			
 			window.onerror = function (message, _, line, column) {
 				function getOrder(number) {
@@ -354,8 +385,10 @@ class Project {
 			function require(packageName) {
 				console.error('Node.js is not supported');
 				const xhr = new XMLHttpRequest();
-				xhr.open("POST", "https://unpkg.com/" + packageName);
+				let done = false;
+				xhr.open("HEAD", "https://unpkg.com/" + packageName);
 				xhr.onreadystatechange = function () {
+					if (done) return; else done = true;
 					const {status, responseURL} = xhr;
 					if (status === 0 || (status >= 200 && status < 400)) {
 						function createText(text) {
@@ -384,7 +417,7 @@ class Project {
 							console.warn(\`Package <q>\${packageName}</q> isn't supported because it's backend\`);
 						} else if (packageName.startsWith("@babel/")) {
 							console.warn("Compiler already uses Babel. Don't use it.")
-						} else if (/node-sass|react|react-dom/.includes(packageName)) {
+						} else if (/node-sass|react|react-dom/.test(packageName)) {
 							console.warn(\`Package <q>\${packageName}</q> is built-in by compiler. Don't use it\`);
 						} else {
 							console.warn(\`Package <q>\${packageName}</q> doesn't exist\`);

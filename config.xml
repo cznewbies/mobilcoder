@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<widget id="com.cznewbies.mobilcoder" version="2.5.2" defaultlocale="en-US" xmlns="http://www.w3.org/ns/widgets" xmlns:gap="http://phonegap.com/ns/6.5.0">
+<widget id="com.cznewbies.mobilcoder" version="2.10.0" defaultlocale="en-US" xmlns="http://www.w3.org/ns/widgets" xmlns:gap="http://phonegap.com/ns/6.5.0">
 	<name>MobilCoder</name>
 	<description>
 		MobilCoder is free application that can edit HTML5, CSS3 and JavaScript and view it, all on mobile. BTW, you don't have to use pure JavaScript, you can use Typescript and/or React.
@@ -13,7 +13,13 @@
 	<plugin name="cordova-plugin-whitelist" version="1.3.4" source="npm" />
 	<access origin="*" />
 	<allow-navigation href="*" />
+	<allow-intent href="blob:*" />
+	<allow-navigation href="blob:*" />
 	<allow-intent href="*" />
+	<plugin name="cordova-plugin-openwith-cxm" source="npm" spec="1.6.2">
+		<param name="ANDROID_MIME_TYPE" value="text/html" />
+		<param name="IOS_URL_SCHEME" value="mobilcoder" />
+		<param name="IOS_UNIFORM_TYPE_IDENTIFIER" value="public.html"/>
+	</plugin>
 	<icon src="icons/icon.png" />
-	<plugin name="cordova-plugin-statusbar" spec="~2.4.3" />
 </widget>
